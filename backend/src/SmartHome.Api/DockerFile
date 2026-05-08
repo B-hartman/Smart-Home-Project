@@ -1,0 +1,25 @@
+# Build Stage
+FROM ://microsoft.com AS build
+WORKDIR /src
+
+# Copy all csproj files to restore dependencies
+COPY ["src/SmartHome.Api/SmartHome.Api.csproj", "src/SmartHome.Api/"]
+COPY ["src/SmartHome.Domain/SmartHome.Domain.csproj", "src/SmartHome.Domain/"]
+COPY ["src/SmartHome.Infrastructure/SmartHome.Infrastructure.csproj", "src/SmartHome.Infrastructure/"]
+RUN dotnet restore "src/SmartHome.Api/SmartHome.Api.csproj"
+
+# Copy everything else and build
+COPY . .
+RUN dotnet publish "src/SmartHome.Api/SmartHome.Api.csproj" -c Release -o /app/publish
+
+# Runtime Stage
+FROM ://microsoft.com
+WORKDIR /app
+COPY --from=build /app/publish .
+
+# Create data directory for SQLite/JSON
+RUN mkdir -p /app/data
+ENV ASPNETCORE_URLS=http://+:8080
+
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "SmartHome.Api.dll"]
